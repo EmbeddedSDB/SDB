@@ -15,10 +15,10 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 late WebSocketChannel _channel;
 
-void main() async{
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
-    options : DefaultFirebaseOptions.currentPlatform
+    options: DefaultFirebaseOptions.currentPlatform,
   );
 
   await setupFirebaseMessaging();
@@ -65,7 +65,6 @@ Future<void> setupFirebaseMessaging() async {
 
   // 백그라운드 및 종료 상태 알림 처리
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-
 }
 
 // 전역 변수로 플러그인 선언
@@ -128,7 +127,6 @@ void showNotification(String title, String body, {String? topic}) {
   );
 }
 
-
 Future<void> _checkAndRequestPermissions() async {
   if (await Permission.microphone.isGranted) {
     print("Microphone permission granted.");
@@ -149,7 +147,6 @@ Future<void> _checkAndRequestPermissions() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -234,30 +231,7 @@ class _IpInputScreenState extends State<IpInputScreen> {
     }
   }
 
-  // Future<void> _startRecording() async {
-  //   await _checkAndRequestPermissions(); // 권한 요청
-  //
-  //   final String audioUrl = "http://$_savedIp:5000/stream_to_speaker"; // 입력받은 IP 주소 사용
-  //   _channel = WebSocketChannel.connect(
-  //     Uri.parse(audioUrl),
-  //   );
-  //
-  //   // 오디오 녹음 시작
-  //   await _recorder?.openRecorder();
-  //   await _recorder?.startRecorder(
-  //     codec: Codec.pcm16, // PCM 포맷
-  //     toStream: (StreamSink<Uint8List> sink) {
-  //       return (dynamic buffer) {
-  //         if (buffer is Uint8List) {
-  //           // WebSocket으로 PCM 데이터 전송
-  //           _channel.sink.add(buffer);
-  //         }
-  //       };
-  //     },
-  //   );
-  //   print("Streaming started...");
-  // }
-
+  // 오디오 녹음 중지
   Future<void> stopStreaming() async {
     await _recorder?.stopRecorder();
     await _recorder?.closeRecorder();
@@ -285,12 +259,11 @@ class _IpInputScreenState extends State<IpInputScreen> {
     }
 
     setState(() {
-      if(!_showWebcam) {
+      if (!_showWebcam) {
         _showWebcam = true; // 웹캠 표시
         _webViewController.loadRequest(
             Uri.parse('http://$_savedIp:5000/stream'));
-      }
-      else {
+      } else {
         _showWebcam = false;
         _webViewController.loadRequest(
             Uri.parse('http://$_savedIp:5000/stop_stream'));
@@ -361,28 +334,17 @@ class _IpInputScreenState extends State<IpInputScreen> {
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.black),
                 ),
-                child: WebViewWidget(controller: _webViewController
-                ),
+                child: WebViewWidget(controller: _webViewController),
               ),
             _isPlaying
                 ? ElevatedButton(
-                  onPressed: _stopStreaming,
-                  child: Text('중단'),
+              onPressed: _stopStreaming,
+              child: Text('중단'),
             )
                 : ElevatedButton(
-                  onPressed: _startStreaming,
-                  child: Text('소리 듣기'),
+              onPressed: _startStreaming,
+              child: Text('소리 듣기'),
             ),
-            // ElevatedButton(
-            //   onPressed: () {
-            //     if (_isRecording) {
-            //       _stopRecording();
-            //     } else {
-            //       _startRecording();
-            //     }
-            //   },
-            //   child: Text(_isRecording ? "Stop Recording" : "Start Recording"),
-            // ),
           ],
         ),
       ),

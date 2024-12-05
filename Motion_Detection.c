@@ -17,7 +17,8 @@
 // 핀
 #define PIR_PIN 24      // GPIO 24 모션감지 센서
 #define BUTTON_PIN 23   // GPIO 23 초인종
-// #define SERVO_PIN 19    // GPIO 19 서브모터
+// #define SERVO_PIN 19    // GPIO 19 서브모터 다른 코드에서 사용 중임...
+#define BUZZER_PIN 17 // GPIO 17 부저
 
 // 서브모터 설정
 #define MIN_PULSE_WIDTH 50  // 최소 펄스
@@ -151,39 +152,36 @@ void *buttonPressThread(void *arg) {
     return NULL;
 }
 
-// 서보모터 스레드
-// void *servoMotorControlThread(void *arg) {
-//     while (1) {
-//         if (servoActionFlag) {
-//             // 90도로 서보 모터 회전
-//             int pulseWidth = angleToPulseWidth(90);
-//             pwmWrite(SERVO_PIN, pulseWidth);
-//             printf("서보 모터 90도 : 문 열어줌\n");
-//             usleep(1000000); // 1초
+void playTone(int frequency, int duration) {
+    int period = 1000000 / frequency;
+    int halfPeriod = period / 2;
 
-//             // 0도로 서보 모터 회전
-//             pulseWidth = angleToPulseWidth(0);
-//             pwmWrite(SERVO_PIN, pulseWidth);
-//             printf("서보 모터 0도\n");
-//             usleep(500000); // 0.5초
+    for (int i = 0; i < (duration * 1000) / period; i++) {
+        digitalWrite(BUZZER_PIN, HIGH);
+        usleep(halfPeriod);
+        digitalWrite(BUZZER_PIN, LOW);
+        usleep(halfPeriod);
+    }
+}
 
-//             // flag 리셋
-//             servoActionFlag = 0;
-//         }
+void *buzzerThread(void *arg) {
+    while (1) {
+        if (doorbellState) {
+            printf("Buzzer: Ding-dong\n");
 
-//         usleep(10000);
-//     }
-//     return NULL;
-// }
+            playTone(523, 400);
+            usleep(100000);
+            playTone(392, 400);
 
-// 서보모터 트리거 스레드
-// void *servoTriggerThread(void *arg) {
-//     while (1) {
-//         servoActionFlag = 1;
-//         sleep(5);
-//     }
-//     return NULL;
-// }
+            digitalWrite(BUZZER_PIN, LOW);
+
+            doorbellState = 0;
+        }
+        usleep(100000);
+    }
+    return NULL;
+}
+
 
 int main() {
 
@@ -194,15 +192,10 @@ int main() {
 
     pinMode(PIR_PIN, INPUT); 
     pinMode(BUTTON_PIN, INPUT);
+    pinMode(BUZZER_PIN, OUTPUT);
+    digitalWrite(BUZZER_PIN, LOW);
     pullUpDnControl(BUTTON_PIN, PUD_UP);
 
-    // 서브모터
-    // pinMode(SERVO_PIN, PWM_OUTPUT);
-    // pwmSetMode(PWM_MODE_MS);
-    // pwmSetRange(PWM_RANGE);
-    // pwmSetClock(PWM_CLOCK_DIVISOR);
-
-    // 상태 파일 초기화 <- 기존 파일 삭제
     unlink(STATUS_FILE);
 
     // 서보 모터 프로세스 코드 시작
@@ -217,7 +210,7 @@ int main() {
         perror("execlp 실패");
         exit(EXIT_FAILURE);
     } else {
-        pthread_t motionThread, buttonThread, servoThread, triggerThread;
+        pthread_t motionThread, buttonThread, buzzerThreadId;
 
         if (pthread_create(&motionThread, NULL, motionDetectionThread, NULL) != 0) {
             printf("모션 스레드 생성 실패\n");
@@ -229,15 +222,10 @@ int main() {
             return 1;
         }
 
-        // if (pthread_create(&servoThread, NULL, servoMotorControlThread, NULL) != 0) {
-        //     printf("서브모터 스레드 생성 실패\n");
-        //     return 1;
-        // }
-
-        // if (pthread_create(&triggerThread, NULL, servoTriggerThread, NULL) != 0) {
-        //     printf("서브모터 트리거 스레드 생성 실패\n");
-        //     return 1;
-        // }
+        if (pthread_create(&buzzerThreadId, NULL, buzzerThread, NULL) != 0) {
+            printf("버저 스레드 생성 실패\n");
+            return 1;
+        }
 
         // 메인 스레드
         while (1) {
@@ -252,8 +240,7 @@ int main() {
         // 스레드
         pthread_join(motionThread, NULL);
         pthread_join(buttonThread, NULL);
-        pthread_join(servoThread, NULL);
-        pthread_join(triggerThread, NULL);
+        pthread_join(buzzerThreadId, NULL);
 
         wait(NULL);
         printf("자식 프로세스 종료됨");

@@ -29,4 +29,4 @@ data = {
     "is_active": True
 }
 
-add_data("visitor", None, data)
+add_data("bell", None, data)

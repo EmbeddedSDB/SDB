@@ -11,8 +11,8 @@ exports.notifyOnFirestoreCreateVisitor = onDocumentCreated(
 
     const message = {
       notification: {
-        title: "Visitor 컬렉션: 새 데이터 추가",
-        body: `새 데이터: ${JSON.stringify(newData)}`,
+        title: "문 앞에서 움직임이 감지되었어요!",
+        body: "앱을 켜서 확인해보세요.",
       },
       topic: "visitor-updates", // visitor 주제로 푸시 알림 전송
     };
@@ -35,8 +35,8 @@ exports.notifyOnFirestoreCreatebell = onDocumentCreated(
 
     const message = {
       notification: {
-        title: "bell 컬렉션: 새 데이터 추가",
-        body: `새 데이터: ${JSON.stringify(newData)}`,
+        title: "방문자가 있어요!",
+        body: "앱을 켜서 확인해보세요.",
       },
       topic: "bell-updates", // bell 주제로 푸시 알림 전송
     };

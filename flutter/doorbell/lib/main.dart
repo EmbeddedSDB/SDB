@@ -1,19 +1,17 @@
-import 'dart:async';
-import 'dart:typed_data';
+import 'dart:io';
 
-import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:http/http.dart' as http;
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'package:just_audio/just_audio.dart';
-import 'package:flutter_sound/flutter_sound.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 
-late WebSocketChannel _channel;
+import 'package:http/http.dart' as http;
+import 'package:flutter/material.dart';
+import 'package:webview_flutter/webview_flutter.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart'; // 임시 저장소 경로를 가져오기 위해 사용
+import 'package:record/record.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
@@ -175,28 +173,15 @@ class _IpInputScreenState extends State<IpInputScreen> {
   late final WebViewController _webViewController;
   late AudioPlayer _audioPlayer;
   bool _isPlaying = false;
-  FlutterSoundRecorder? _recorder;
-  bool _isRecording = false;
+  final AudioRecorder _record = AudioRecorder();
+  String? _recordedFilePath;
 
   @override
   void initState() {
     super.initState();
     _audioPlayer = AudioPlayer();
-    _recorder = FlutterSoundRecorder();
-    _initializeRecorder();
     _webViewController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted);
-  }
-
-  Future<void> _initializeRecorder() async {
-    await _recorder!.openRecorder(); // 오디오 세션 열기
-  }
-
-  @override
-  void dispose() {
-    _recorder!.closeRecorder();
-    _audioPlayer.dispose(); // 리소스 해제
-    super.dispose();
   }
 
   Future<void> _stopStreaming() async {
@@ -234,35 +219,56 @@ class _IpInputScreenState extends State<IpInputScreen> {
     }
   }
 
-  // Future<void> _startRecording() async {
-  //   await _checkAndRequestPermissions(); // 권한 요청
-  //
-  //   final String audioUrl = "http://$_savedIp:5000/stream_to_speaker"; // 입력받은 IP 주소 사용
-  //   _channel = WebSocketChannel.connect(
-  //     Uri.parse(audioUrl),
-  //   );
-  //
-  //   // 오디오 녹음 시작
-  //   await _recorder?.openRecorder();
-  //   await _recorder?.startRecorder(
-  //     codec: Codec.pcm16, // PCM 포맷
-  //     toStream: (StreamSink<Uint8List> sink) {
-  //       return (dynamic buffer) {
-  //         if (buffer is Uint8List) {
-  //           // WebSocket으로 PCM 데이터 전송
-  //           _channel.sink.add(buffer);
-  //         }
-  //       };
-  //     },
-  //   );
-  //   print("Streaming started...");
-  // }
+  // 녹음 시작 함수
+  Future<void> startRecording() async {
+    if (await _record.hasPermission()) {
+      // 앱의 임시 디렉토리에서 파일 저장 경로 가져오기
+      Directory tempDir = await getTemporaryDirectory();
+      String filePath = '${tempDir.path}/audio_recording.wav';
 
-  Future<void> stopStreaming() async {
-    await _recorder?.stopRecorder();
-    await _recorder?.closeRecorder();
-    _channel.sink.close();
-    print("Streaming stopped.");
+      // 녹음 시작
+      await _record.start(
+        path: filePath,
+        const RecordConfig(),
+      );
+
+      print('녹음 시작: $filePath');
+    } else {
+      print('녹음 권한이 없습니다.');
+    }
+  }
+
+  // 녹음 중지 함수
+  Future<void> stopRecording() async {
+    String? path = await _record.stop();
+
+    if (path != null) {
+      setState(() {
+        _recordedFilePath = path;
+      });
+      print('녹음 완료: $path');
+    }
+  }
+
+  // 업로드 함수
+  Future<void> uploadAudio() async {
+    if (_recordedFilePath == null) {
+      print('녹음된 파일이 없습니다.');
+      return;
+    }
+
+    File audioFile = File(_recordedFilePath!);
+    var uri = Uri.parse('http://$_savedIp:5000/upload');
+    var request = http.MultipartRequest('POST', uri);
+
+    request.files.add(await http.MultipartFile.fromPath('file', audioFile.path));
+    var response = await request.send();
+
+    if (response.statusCode == 200) {
+      print('업로드 성공');
+    } else {
+      print('업로드 실패: ${response.statusCode}');
+    }
   }
 
   // IP 저장
@@ -373,16 +379,32 @@ class _IpInputScreenState extends State<IpInputScreen> {
                   onPressed: _startStreaming,
                   child: Text('소리 듣기'),
             ),
-            // ElevatedButton(
-            //   onPressed: () {
-            //     if (_isRecording) {
-            //       _stopRecording();
-            //     } else {
-            //       _startRecording();
-            //     }
-            //   },
-            //   child: Text(_isRecording ? "Stop Recording" : "Start Recording"),
-            // ),
+            GestureDetector(
+              onLongPressStart: (details) {
+                // 버튼을 누를 때 녹음 시작
+                startRecording();
+              },
+              onLongPressEnd: (details) async {
+                // 녹음 중지
+                await stopRecording();
+
+                // 녹음 중지가 완료된 후 파일 업로드
+                await uploadAudio();
+              },
+              child: ElevatedButton(
+                onPressed: () {}, // 활성화된 버튼 유지 (GestureDetector에서 이벤트 처리)
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue, // 버튼 배경색 설정
+                  shape: CircleBorder(), // 둥근 버튼
+                  padding: const EdgeInsets.all(20), // 버튼 크기 설정
+                ),
+                child: const Icon(
+                  Icons.mic, // 마이크 아이콘
+                  color: Colors.white, // 아이콘 색상
+                  size: 30, // 아이콘 크기
+                ),
+              ),
+            ),
           ],
         ),
       ),

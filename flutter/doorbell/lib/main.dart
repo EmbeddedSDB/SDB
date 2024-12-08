@@ -229,7 +229,7 @@ class _IpInputScreenState extends State<IpInputScreen> {
       // 녹음 시작
       await _record.start(
         path: filePath,
-        const RecordConfig(),
+        const RecordConfig(),  // RecordConfig를 컨트롤 누르고 들어가서 this.encoder를 AudioEncoder.wav로 바꿔줘야 제대로 작동함.
       );
 
       print('녹음 시작: $filePath');

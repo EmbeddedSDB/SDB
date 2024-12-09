@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
@@ -12,11 +13,12 @@ import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart'; // 임시 저장소 경로를 가져오기 위해 사용
 import 'package:record/record.dart';
+import 'package:video_player/video_player.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
-    options : DefaultFirebaseOptions.currentPlatform
+      options : DefaultFirebaseOptions.currentPlatform
   );
 
   await setupFirebaseMessaging();
@@ -176,6 +178,8 @@ class _IpInputScreenState extends State<IpInputScreen> {
   final AudioRecorder _record = AudioRecorder();
   String? _recordedFilePath;
 
+  bool isRecordPressed = false;
+
   @override
   void initState() {
     super.initState();
@@ -330,84 +334,269 @@ class _IpInputScreenState extends State<IpInputScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('IP 입력 테스트'),
+        title: Text('스마트 도어벨'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.list),
+            onPressed: () {
+              // 오른쪽 위 버튼 클릭 시 비디오 리스트 화면으로 이동
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => VideoListScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
-              controller: _ipController,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'IP 주소 입력',
-              ),
+            // IP 입력 및 저장
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _ipController,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(),
+                      labelText: 'IP 주소 입력',
+                    ),
+                  ),
+                ),
+                SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _saveIp,
+                  child: Text('IP 저장'),
+                ),
+              ],
             ),
             SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _saveIp,
-              child: Text('IP 저장'),
+            // 카메라와 소리 듣기 버튼
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: _toggleWebcam,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _showWebcam ? Colors.blue : Colors.white,
+                    shape: CircleBorder(),
+                    padding: EdgeInsets.all(20),
+                  ),
+                  child: Icon(
+                    Icons.videocam,
+                    color: _showWebcam ? Colors.white : Colors.blue,
+                    size: 30,
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: _isPlaying ? _stopStreaming : _startStreaming,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _isPlaying ? Colors.blue : Colors.white,
+                    shape: CircleBorder(),
+                    padding: EdgeInsets.all(20),
+                  ),
+                  child: Icon(
+                    Icons.volume_up,
+                    color: _isPlaying ? Colors.white : Colors.blue,
+                    size: 30,
+                  ),
+                ),
+              ],
             ),
             SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _sendRequest,
-              child: Text('요청 전송'),
+            // 카메라 화면
+            Container(
+              height: 265,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.black),
+              ),
+              child: _showWebcam
+                  ? WebViewWidget(controller: _webViewController)
+                  : Container(color: Colors.black), // 검은색으로 채우기
             ),
             SizedBox(height: 16),
-            // 웹캠 보기 버튼
-            ElevatedButton(
-              onPressed: _toggleWebcam,
-              child: Text('카메라 토글'),
-            ),
-            if (_showWebcam && _savedIp.isNotEmpty)
-              Container(
-                height: 265,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.black),
+            // 녹음 버튼과 문 열기 버튼
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                GestureDetector(
+                  onLongPressStart: (details) {
+                    setState(() {
+                      isRecordPressed = true;
+                    });
+                    startRecording();
+                  },
+                  onLongPressEnd: (details) async {
+                    setState(() {
+                      isRecordPressed = false;
+                    });
+                    await stopRecording();
+                    await uploadAudio();
+                  },
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isRecordPressed ? Colors.blue : Colors.white,
+                      shape: CircleBorder(),
+                      padding: const EdgeInsets.all(20),
+                    ),
+                    child: Icon(
+                      Icons.mic,
+                      color: isRecordPressed ? Colors.white : Colors.blue,
+                      size: 30,
+                    ),
+                  ),
                 ),
-                child: WebViewWidget(controller: _webViewController
+                ElevatedButton(
+                  onPressed: _sendRequest,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    shape: CircleBorder(),
+                    padding: const EdgeInsets.all(20),
+                  ),
+                  child: const Icon(
+                    Icons.door_front_door_rounded,
+                    color: Colors.blue,
+                    size: 30,
+                  ),
                 ),
-              ),
-            _isPlaying
-                ? ElevatedButton(
-                  onPressed: _stopStreaming,
-                  child: Text('중단'),
-            )
-                : ElevatedButton(
-                  onPressed: _startStreaming,
-                  child: Text('소리 듣기'),
-            ),
-            GestureDetector(
-              onLongPressStart: (details) {
-                // 버튼을 누를 때 녹음 시작
-                startRecording();
-              },
-              onLongPressEnd: (details) async {
-                // 녹음 중지
-                await stopRecording();
-
-                // 녹음 중지가 완료된 후 파일 업로드
-                await uploadAudio();
-              },
-              child: ElevatedButton(
-                onPressed: () {}, // 활성화된 버튼 유지 (GestureDetector에서 이벤트 처리)
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue, // 버튼 배경색 설정
-                  shape: CircleBorder(), // 둥근 버튼
-                  padding: const EdgeInsets.all(20), // 버튼 크기 설정
-                ),
-                child: const Icon(
-                  Icons.mic, // 마이크 아이콘
-                  color: Colors.white, // 아이콘 색상
-                  size: 30, // 아이콘 크기
-                ),
-              ),
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+}
+
+class VideoListScreen extends StatefulWidget {
+  @override
+  _VideoListScreenState createState() => _VideoListScreenState();
+}
+
+class _VideoListScreenState extends State<VideoListScreen> {
+  List<Map<String, dynamic>> videoData = [];
+  bool isLoading = true; // 로딩 상태
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchVideoList();
+  }
+
+  // Firebase Storage에서 비디오 리스트 가져오기
+  Future<void> _fetchVideoList() async {
+    try {
+      final ref = FirebaseStorage.instance.ref('videos'); // 'videos' 디렉토리 참조
+      final result = await ref.listAll(); // 모든 파일 가져오기
+
+      // 각 파일의 메타데이터 및 URL 가져오기
+      final videoInfo = await Future.wait(
+        result.items.map((fileRef) async {
+          final metadata = await fileRef.getMetadata(); // 파일 메타데이터 가져오기
+          final url = await fileRef.getDownloadURL(); // 파일 다운로드 URL 가져오기
+
+          // 저장 시점을 읽고 형식화
+          final createdTime = metadata.timeCreated ?? DateTime.now();
+          final formattedTime = '${createdTime.year}-${createdTime.month.toString().padLeft(2, '0')}-${createdTime.day.toString().padLeft(2, '0')} ${createdTime.hour.toString().padLeft(2, '0')}:${createdTime.minute.toString().padLeft(2, '0')}';
+
+          return {
+            'url': url,
+            'name': formattedTime, // 저장된 시점으로 이름 설정
+          };
+        }).toList(),
+      );
+
+      setState(() {
+        videoData = videoInfo; // 비디오 데이터 저장
+        isLoading = false; // 로딩 완료
+      });
+    } catch (e) {
+      print('Error fetching video list: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('녹화 목록'),
+      ),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator()) // 로딩 중
+          : videoData.isEmpty
+          ? Center(child: Text('비디오가 없습니다.')) // 비디오가 없을 때
+          : ListView.builder(
+        itemCount: videoData.length,
+        itemBuilder: (context, index) {
+          final video = videoData[index];
+          return ListTile(
+            title: Text(video['name']), // 저장 시점 표시
+            onTap: () {
+              // 특정 비디오 선택 시 재생 화면으로 이동
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      VideoPlayerScreen(videoUrl: video['url']),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class VideoPlayerScreen extends StatefulWidget {
+  final String videoUrl;
+
+  const VideoPlayerScreen({required this.videoUrl});
+
+  @override
+  _VideoPlayerScreenState createState() => _VideoPlayerScreenState();
+}
+
+class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+  late VideoPlayerController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.network(widget.videoUrl)
+      ..initialize().then((_) {
+        setState(() {}); // 초기화 완료 후 화면 갱신
+        _controller.play();
+      });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Play Video'),
+      ),
+      body: Center(
+        child: _controller.value.isInitialized
+            ? AspectRatio(
+          aspectRatio: _controller.value.aspectRatio,
+          child: VideoPlayer(_controller),
+        )
+            : CircularProgressIndicator(), // 로딩 중
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 }

@@ -33,13 +33,23 @@ volatile int doorbellState = 0;         // 초인종 버튼이 눌러지면
 volatile int personRecognition = 0;    // 사람이 감지되면
 volatile int servoActionFlag = 0;      // 서브모터 flag -> 다 돌때까지 감지 해야 할 듯?
 
-// firebase 알람 트리거
-void uploadToFirebase() {
-    int result = system("/home/pi/SDB/myenv/bin/python3 /home/pi/SDB/firebaseUpload.py");
+// 초인종 firebase 알람 트리거
+void uploadToFirebase_Bell() {
+    int result = system("/home/pi/SDB/myenv/bin/python3 /home/pi/SDB/firebaseUpload_Bell.py");
     if (result == 0) {
-        printf("Firebase 업로드 성공\n");
+        printf("Bell Firebase 업로드 성공\n");
     } else {
-        printf("Firebase 실패");
+        printf("Bell Firebase 실패");
+    }
+}
+
+// 센서 firebase 알람 트리거
+void uploadToFirebase_Sensor() {
+    int result = system("/home/pi/SDB/myenv/bin/python3 /home/pi/SDB/firebaseUpload_Sensor.py");
+    if (result == 0) {
+        printf("Sensor Firebase 업로드 성공\n");
+    } else {
+        printf("Sensor Firebase 실패");
     }
 }
 
@@ -110,6 +120,7 @@ void *motionDetectionThread(void *arg) {
             personRecognition = 1;
             personDetected = 1;
             // printf("사람 감지, 녹화 프로그램 시작\n");
+            uploadToFirebase_Sensor();
             recordProcess();
         } else if (!motionDetected && personDetected) {
             // 3초 동안 기다림
@@ -139,7 +150,7 @@ void *buttonPressThread(void *arg) {
             doorbellState = 1; // Doorbell was pressed
             printf("초인종이 눌러짐, 알람 전송\n");
 
-            uploadToFirebase();
+            uploadToFirebase_Bell();
 
             printf("화상통화 프로세스 시작\n");
         }

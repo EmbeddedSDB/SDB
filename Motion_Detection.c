@@ -12,7 +12,7 @@
 #include <fcntl.h>
 
 // 임시 파일
-#define STATUS_FILE "/home/pi/SDB/tmp/record_status_signal.txt"
+#define STATUS_FILE "/home/pi/control.txt"
 
 // 핀
 #define PIR_PIN 24      // GPIO 24 모션감지 센서

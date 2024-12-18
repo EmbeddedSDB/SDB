@@ -1,3 +1,9 @@
+import sys
+import os
+
+venv_path = "/home/pi/.local/lib/python3.11/site-packages"
+sys.path.append(venv_path)
+
 import firebase_admin
 from firebase_admin import credentials, firestore
 

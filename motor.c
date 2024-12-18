@@ -7,8 +7,9 @@
 #include <stdbool.h>
 
 #include <wiringPi.h>
+#include <softPwm.h>
 
-#define PWM0 19
+#define PWM0 21
 #define RANGE 2000
 
 #define PORT 65432
@@ -70,8 +71,8 @@ char *dequeue(TaskQueue *queue) {
 
 int rotate_Servo(int angle)
 {
-    int duty = (float)(90+angle) / 180 * 200;
-    pwmWrite(PWM0, duty+50);
+    int duty = (float)(90 + angle) / 180 * 20; // softPwm은 0-100 범위에서 작동하므로 비율 조정
+    softPwmWrite(PWM0, duty);
     delay(10);
     return 0;
 }
@@ -125,10 +126,11 @@ void *socket_thread(void *arg) {
 int main() {
     wiringPiSetupGpio();
 
-    pinMode(PWM0, PWM_OUTPUT);
-    pwmSetMode(PWM_MODE_MS);
-    pwmSetRange(RANGE);
-    pwmSetClock(192);
+    // 소프트 PWM 초기화
+    if (softPwmCreate(PWM0, 0, 100) != 0) {
+        fprintf(stderr, "SoftPwm setup failed\n");
+        return 1;
+    }
 
     rotate_Servo(90);
 

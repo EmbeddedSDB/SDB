@@ -13,6 +13,10 @@
 
 // 임시 파일
 #define STATUS_FILE "/home/pi/control.txt"
+<<<<<<< HEAD
+=======
+#define STREAM_FILE "/home/pi/streaming.txt"
+>>>>>>> flutter-app
 
 // 핀
 #define PIR_PIN 24      // GPIO 24 모션감지 센서
@@ -33,13 +37,23 @@ volatile int doorbellState = 0;         // 초인종 버튼이 눌러지면
 volatile int personRecognition = 0;    // 사람이 감지되면
 volatile int servoActionFlag = 0;      // 서브모터 flag -> 다 돌때까지 감지 해야 할 듯?
 
-// firebase 알람 트리거
-void uploadToFirebase() {
-    int result = system("/home/pi/SDB/myenv/bin/python3 /home/pi/SDB/firebaseUpload.py");
+// 초인종 firebase 알람 트리거
+void uploadToFirebase_Bell() {
+    int result = system("python3 /home/pi/SDB/firebaseUpload_Bell.py");
     if (result == 0) {
-        printf("Firebase 업로드 성공\n");
+        printf("Bell Firebase 업로드 성공\n");
     } else {
-        printf("Firebase 실패");
+        printf("Bell Firebase 실패");
+    }
+}
+
+// 센서 firebase 알람 트리거
+void uploadToFirebase_Sensor() {
+    int result = system("python3 /home/pi/SDB/firebaseUpload_Sensor.py");
+    if (result == 0) {
+        printf("Sensor Firebase 업로드 성공\n");
+    } else {
+        printf("Sensor Firebase 실패");
     }
 }
 
@@ -48,16 +62,14 @@ void uploadToFirebase() {
 // Python 스크립트 실행
 void recordProcess() {
     if(python_pid == -1) {
-
-        unlink(STATUS_FILE);
-
+        //unlink(STATUS_FILE);
         pid_t pid = fork();
         if (pid < 0) {
             perror("fork 실패");
             return;
         } else if (pid == 0) {
             // 자식 프로세스: Python 스크립트 실행
-            execlp("/home/pi/SDB/myenv/bin/python3", "python3", "/home/pi/SDB/recordStatus.py", NULL);
+            execlp("python3", "python3", "/home/pi/SDB/app3.py", NULL);
             perror("Python 실행 실패");
             exit(EXIT_FAILURE);
         }
@@ -85,9 +97,21 @@ void stopPythonScript() {
     if (python_pid != -1) {
         writeSignalToFile("0");  // 종료 신호 파일에 기록
         printf("Python 스크립트 종료 요청됨, PID: %d\n", python_pid);
-        python_pid = -1;  // PID 리셋
+        // python_pid = -1;  // PID 리셋
     } else {
-        printf("Python 스크립트가 실행 중이 아님\n");
+        printf("Python 스크립트가 실행 중이 아님1\n");
+    }
+}
+
+
+// Python 프로세스 종료 요청
+void startPythonScript() {
+    if (python_pid != -1) {
+        writeSignalToFile("1");  // 종료 신호 파일에 기록
+        printf("Python 스크립트 종료 요청됨, PID: %d\n", python_pid);
+        // python_pid = -1;  // PID 리셋
+    } else {
+        printf("Python 스크립트가 실행 중이 아님2\n");
     }
 }
 
@@ -100,28 +124,32 @@ int angleToPulseWidth(float angle) {
 
 // 모션 감지 스레드
 void *motionDetectionThread(void *arg) {
-    int personDetected = 0; // 사람을 감지하면?
+    int personDetected = 0; // 사람 감지 여부
+    int motionDetected = 0; // 센서 출력 상태
+    unsigned long lastMotionTime = 0; // 마지막으로 움직임을 감지한 시간
 
     while (1) {
-        int motionDetected = digitalRead(PIR_PIN);
-
-        if (motionDetected && !personDetected) {
-            //사람 감지 하고 녹화 프로그램 시작
-            personRecognition = 1;
-            personDetected = 1;
-            // printf("사람 감지, 녹화 프로그램 시작\n");
-            recordProcess();
-        } else if (!motionDetected && personDetected) {
-            // 3초 동안 기다림
-            delay(3000);
-            if (!digitalRead(PIR_PIN)) {
-                personRecognition = 0;
-                personDetected = 0;
-                // printf("사람 없음, 녹화 프로그램 종료\n");
-                stopPythonScript();
+        motionDetected = digitalRead(PIR_PIN);
+        //printf("타이머 : %lu\n", millis() - lastMotionTime);
+        if (motionDetected) {
+            lastMotionTime = millis(); // 움직임 감지 시간 업데이트
+            if (!personDetected) {
+                personRecognition = 1;
+                personDetected = 1;
+                printf("사람 감지, 녹화 프로그램 시작\n");
+                writeSignalToFile("1");
+                uploadToFirebase_Sensor();
             }
         }
-        delay(500);
+        // 8초 동안 움직임이 없으면 상태를 초기화
+        else if (!motionDetected && (millis() - lastMotionTime > 8000) && personRecognition) {
+            personRecognition = 0;
+            personDetected = 0;
+            printf("사람 없음, 녹화 프로그램 종료\n");
+            writeSignalToFile("0");
+        }
+
+        delay(200); // 짧은 대기
     }
     return NULL;
 }
@@ -139,7 +167,7 @@ void *buttonPressThread(void *arg) {
             doorbellState = 1; // Doorbell was pressed
             printf("초인종이 눌러짐, 알람 전송\n");
 
-            uploadToFirebase();
+            uploadToFirebase_Bell();
 
             printf("화상통화 프로세스 시작\n");
         }
@@ -184,6 +212,21 @@ void *buzzerThread(void *arg) {
 
 
 int main() {
+    FILE *file = fopen(STATUS_FILE, "w");
+    if (file == NULL) {
+        perror("파일 열기 실패");
+        return 1;
+    }
+    fprintf(file, "%s", 0);
+    fclose(file);
+
+    file = fopen(STREAM_FILE, "w");
+    if (file == NULL) {
+        perror("파일 열기 실패");
+        return 1;
+    }
+    fprintf(file, "%s", 0);
+    fclose(file);
 
     if (wiringPiSetupGpio() == -1) {
         printf("Failed to initialize WiringPi with GPIO mode!\n");
@@ -196,55 +239,69 @@ int main() {
     digitalWrite(BUZZER_PIN, LOW);
     pullUpDnControl(BUTTON_PIN, PUD_UP);
 
-    unlink(STATUS_FILE);
 
     // 서보 모터 프로세스 코드 시작
-    pid_t pid = fork();
+    pid_t motor_pid, python_pid;
 
-    if(pid < 0) {
+    python_pid = fork();
+    if(python_pid < 0) {
         perror("fork 실패");
         exit(EXIT_FAILURE);
-    } else if (pid == 0){
+    } else if (python_pid == 0){
+        printf("python 프로세스 실행");
+        fflush(stdout);
+        execlp("python3", "python3", "/home/pi/SDB/app3.py", NULL);
+        perror("execlp 실패");
+        exit(EXIT_FAILURE);
+    } 
+    
+    motor_pid = fork();
+    if(motor_pid < 0) {
+        perror("fork 실패");
+        exit(EXIT_FAILURE);
+    } else if (motor_pid == 0){
         printf("서보모터 프로세스 실행");
+        fflush(stdout);
         execlp("./motor", "./motor", NULL);
         perror("execlp 실패");
         exit(EXIT_FAILURE);
-    } else {
-        pthread_t motionThread, buttonThread, buzzerThreadId;
+    } 
 
-        if (pthread_create(&motionThread, NULL, motionDetectionThread, NULL) != 0) {
-            printf("모션 스레드 생성 실패\n");
-            return 1;
-        }
+    pthread_t motionThread, buttonThread, buzzerThreadId;
 
-        if (pthread_create(&buttonThread, NULL, buttonPressThread, NULL) != 0) {
-            printf("버튼 스레드 생성 실패\n");
-            return 1;
-        }
-
-        if (pthread_create(&buzzerThreadId, NULL, buzzerThread, NULL) != 0) {
-            printf("버저 스레드 생성 실패\n");
-            return 1;
-        }
-
-        // 메인 스레드
-        while (1) {
-            if (personRecognition) {
-                printf("사람 감지 O\n");
-            } else {
-                printf("사람 감지 X\n");
-            }
-            delay(1000);
-        }
-
-        // 스레드
-        pthread_join(motionThread, NULL);
-        pthread_join(buttonThread, NULL);
-        pthread_join(buzzerThreadId, NULL);
-
-        wait(NULL);
-        printf("자식 프로세스 종료됨");
+    if (pthread_create(&motionThread, NULL, motionDetectionThread, NULL) != 0) {
+        printf("모션 스레드 생성 실패\n");
+        return 1;
     }
+
+    if (pthread_create(&buttonThread, NULL, buttonPressThread, NULL) != 0) {
+        printf("버튼 스레드 생성 실패\n");
+        return 1;
+    }
+
+    if (pthread_create(&buzzerThreadId, NULL, buzzerThread, NULL) != 0) {
+        printf("버저 스레드 생성 실패\n");
+        return 1;
+    }
+
+    // 메인 스레드
+    while (1) {
+        if (personRecognition) {
+            printf("사람 감지 O\n");
+        } else {
+            printf("사람 감지 X\n");
+        }
+        delay(1000);
+    }
+
+    // 스레드
+    pthread_join(motionThread, NULL);
+    pthread_join(buttonThread, NULL);
+    pthread_join(buzzerThreadId, NULL);
+
+    wait(NULL);
+    printf("자식 프로세스 종료됨");
+
 
     return 0;
 }

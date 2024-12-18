@@ -13,10 +13,7 @@
 
 // 임시 파일
 #define STATUS_FILE "/home/pi/control.txt"
-<<<<<<< HEAD
-=======
 #define STREAM_FILE "/home/pi/streaming.txt"
->>>>>>> flutter-app
 
 // 핀
 #define PIR_PIN 24      // GPIO 24 모션감지 센서

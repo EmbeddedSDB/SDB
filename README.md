@@ -793,48 +793,53 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
 ## 🖥 기능 시연
 
-**동작 감지 센서 & 녹화 기능**
+<blockquote>
+  동작 감지 센서 & 녹화 기능
+</blockquote>
 
-<!-- <p align="center">
-  <img src="" alt="동작 감지 센서 이미지" height="400">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="" alt="녹화 이미지" height="400">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="" alt="스마트폰 알림1" height="400">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="" alt="스마트폰 녹화" height="400">
-</p> -->
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/79baca8d-8ccf-4dee-b540-590561bc8374" alt="동작 감지 센서 이미지" height="250">
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://github.com/user-attachments/assets/2be59cc1-29f0-4d63-9005-1efa469e4e08" alt="녹화 이미지" height="250">
+</p>
+<br />
 
 - 방문자의 움직임 감지 시 자동으로 녹화 시작
 - 일정 시간 동안 감지되면 스마트폰으로 문 앞에 누가 있다고 알림 전송
 - 녹화된 영상은 스마트폰 앱에서 확인 가능
 
-**초인종 기능**
+<br />
+<blockquote>
+  초인종 기능
+</blockquote>
   
-<!-- <p align="center">
-  <img src="" alt="부저 이미지" height="400">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="" alt="초인종 이미지" height="400">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="" alt="스마트폰 알림2" height="400">
-</p> -->
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/76d5ccc9-1c0a-4415-a0ab-21893b5cda5a" alt="초인종 이미지" height="250">
+</p>
+<br />
 
 - 초인종 버튼 누를 시 부저를 통해 "딩동" 소리가 남
 - 스마트폰으로 누군가가 초인종을 눌렀다고 알림 전송
 
-**화상 통화 기능**
-<!-- <p align="center">
-  <img src="" alt="라즈베리파이 스피커 & 마이크" height="400">
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="" alt="스마트폰 통화 기능" height="400">
-</p> -->
+<br />
+<blockquote>
+  화상 통화 기능
+</blockquote>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/283c4ab4-e4cf-484f-8572-b89379b9a00c" alt="화상 프로세스" height="250">
+</p>
+<br />
+
+통화 영상을 보려면 [통화](https://youtube.com/shorts/61aT8ZT9RZU?feature=share) 클릭
+<br />
 
 - 초인종의 카메라로 바깥 상황을 실시간으로 앱에서 확인
 - 스마트폰 앱에서 음성 및 영상 통화 실행
 - 초인종 마이크로 음성 전달, 스마트폰 스피커로 출력
 - 스마트폰 마이크로 음성 전달, 초인종 스피커로 출력.
 
-<br/>
+<br />
 
 ## 👨🏻‍💻 팀원 소개
 | Profile | Role | Part |

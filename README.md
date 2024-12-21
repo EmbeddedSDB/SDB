@@ -91,13 +91,47 @@
 | **firebase_messaging**  | Firebase를 통해 푸시 알림 수신 및 관리                        |
 | **just_audio**          | Flutter 앱에서 오디오 스트리밍 데이터를 재생                  |
 
-## 📁 전체 구조
+## 📁 시스템 설계 및 구조
+
+### 시스템 아키텍처
+
+```mermaid
+graph TD
+    %% 노드 정의
+    A[PIR 센서] -->|움직임 감지| B[Raspberry Pi]
+    C[초인종 버튼] -->|버튼 클릭 이벤트| B
+    D[라즈베리파이 카메라] -->|영상 캡처| B
+    B -->|데이터 전송| E[Flask 서버]
+    E -->|녹화 영상 저장| F[Firebase Storage]
+    E -->|이벤트 기록| G[Firebase Firestore]
+    E -->|푸시 알림 전송| H[Firebase Messaging]
+    H -->|알림 수신| I[Flutter 앱]
+    F -->|녹화 영상 확인| I
+    B -->|실시간 스트리밍| I
+    I -->|원격 제어 요청| B
+    B -->|도어락 제어| J[서보모터]
+    B -->|알림음 출력| K[부저]
+
+    %% 스타일 정의
+    classDef hardware fill:#f0f0f0,stroke:#cccccc,stroke-width:2px;
+    classDef raspberrypi fill:#f9b0b4,stroke:#ff0000,stroke-width:2px;
+    classDef raspberrypi_alt fill:#aef0b0,stroke:#00cc00,stroke-width:2px;
+    classDef flask fill:#b3d6f3,stroke:#0066cc,stroke-width:2px;
+    classDef firebase fill:#fffacd,stroke:#ffcc00,stroke-width:2px; 
+    classDef flutter fill:#e6ccff,stroke:#9933ff,stroke-width:2px;
+
+    %% 스타일 적용
+    class A,C,D hardware;
+    class B raspberrypi,raspberrypi_alt;
+    class E flask;
+    class F,G,H firebase;
+    class I flutter;
+    class J,K hardware;
 
 
-## ⌨ 구현 내용
+```
 
-
-## 🖥 주요 기능
+### 🖥 주요 기능
 
 <blockquote>
   동작 감지 센서 & 녹화 기능
@@ -164,6 +198,10 @@
 - 실시간 영상이 서버를 통해서 스마트폰으로 전송이 됨.
 <br />
 
+
+## ⌨ 구현 내용
+
+
 ## 👨🏻‍💻 팀원 소개
 | Profile | Role | Part |
 | ------- | ---- | ---- |
@@ -172,4 +210,6 @@
 | <div align="center"><a href="https://github.com/son0307"><img src="https://github.com/user-attachments/assets/59705e16-65fd-4f8b-918a-c5bc10f71676" width="70px;" alt="son"/><br/><sub><b>손민우</b></sub></a></div> | 팀원 | - 데이터 송수신 관리<br/>- 파이어베스 서버 구축 및 소켓 연결 <br/>- 스마트폰 통화 프로세스 구축<br/>- 화상 프로세스 구축| 
 | <div align="center"><a href="https://github.com/choongmoo"><img src="https://github.com/user-attachments/assets/cf6248cb-967a-480e-b5f6-5c89f8b9434b" width="70px;" alt="choongmoo"/><br/><sub><b>허충무</b></sub></a></div> | 팀원 | - 녹화 시스템 개발<br/>- 녹화 파일 저장 및 전송 시스템 구축|
 
-## 🛠️ 기술 스택
+## 📊 결론 및 향후 개선 방향
+- 프로젝트 성과 요약
+- 향후 개선 및 기능 확장 가능성

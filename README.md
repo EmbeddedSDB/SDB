@@ -193,7 +193,7 @@ graph TD
   | **Flask Request Threads**    | HTTP 요청 처리, `/stream`, `/audio`, `/upload` 등 각 요청별로 스레드 생성 |
   | **Recording Thread**         | Picamera2로 비디오 스트리밍 처리                           |
   | **Audio Streaming Thread**   | PyAudio로 실시간 오디오 데이터 스트리밍                    |
-  | **Audio Playback Thread**    | 업로드된 오디오 파일 재생                                  |
+  | **Audio Playback Thread**    | Pygame으로 업로드된 오디오 파일 재생                       |
   | **Cleanup Thread**           | 애플리케이션 종료 시 카메라 및 오디오 리소스 정리           |
 
 - **Motor Process (`motor.c`)**

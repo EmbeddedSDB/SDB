@@ -1,5 +1,3 @@
-![image](https://github.com/user-attachments/assets/dee32e61-a85a-42d9-82c0-2684dfd77b10)# 임베디드시스템 프로젝트 - SDB
-
 ## 📖 프로젝트 소개
 
 <p align="center">

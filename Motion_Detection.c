@@ -48,26 +48,6 @@ void uploadToFirebase_Sensor() {
 
 
 ///////////////////////////////////////////////////////////// C to python
-// Python 스크립트 실행
-void recordProcess() {
-    if(python_pid == -1) {
-        //unlink(STATUS_FILE);
-        pid_t pid = fork();
-        if (pid < 0) {
-            perror("fork 실패");
-            return;
-        } else if (pid == 0) {
-            // 자식 프로세스: Python 스크립트 실행
-            execlp("python3", "python3", "/home/pi/SDB/app3.py", NULL);
-            perror("Python 실행 실패");
-            exit(EXIT_FAILURE);
-        }
-        python_pid = pid;
-        printf("Python 스크립트 실행됨, PID: %d\n", pid);
-    } else {
-        printf("Python 스크립트 이미 실행 중...\n");
-    }
-}
 
 // 상태 파일에 신호 쓰기
 void writeSignalToFile(const char *signal) {

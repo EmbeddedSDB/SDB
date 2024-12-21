@@ -18,21 +18,13 @@
 // 핀
 #define PIR_PIN 24      // GPIO 24 모션감지 센서
 #define BUTTON_PIN 23   // GPIO 23 초인종
-// #define SERVO_PIN 19    // GPIO 19 서브모터 다른 코드에서 사용 중임...
 #define BUZZER_PIN 17 // GPIO 17 부저
-
-// 서브모터 설정
-#define MIN_PULSE_WIDTH 50  // 최소 펄스
-#define MAX_PULSE_WIDTH 250 // 최대 펄스
-#define PWM_RANGE 2000      // pwm range
-#define PWM_CLOCK_DIVISOR 192 // Clock
 
 pid_t python_pid = -1; //python 프로세스 PID 저장
 
 // 공유 변수
 volatile int doorbellState = 0;         // 초인종 버튼이 눌러지면
 volatile int personRecognition = 0;    // 사람이 감지되면
-volatile int servoActionFlag = 0;      // 서브모터 flag -> 다 돌때까지 감지 해야 할 듯?
 
 // 초인종 firebase 알람 트리거
 void uploadToFirebase_Bell() {
@@ -89,35 +81,7 @@ void writeSignalToFile(const char *signal) {
     printf("신호 파일에 기록: %s\n", signal);
 }
 
-// Python 프로세스 종료 요청
-void stopPythonScript() {
-    if (python_pid != -1) {
-        writeSignalToFile("0");  // 종료 신호 파일에 기록
-        printf("Python 스크립트 종료 요청됨, PID: %d\n", python_pid);
-        // python_pid = -1;  // PID 리셋
-    } else {
-        printf("Python 스크립트가 실행 중이 아님1\n");
-    }
-}
-
-
-// Python 프로세스 종료 요청
-void startPythonScript() {
-    if (python_pid != -1) {
-        writeSignalToFile("1");  // 종료 신호 파일에 기록
-        printf("Python 스크립트 종료 요청됨, PID: %d\n", python_pid);
-        // python_pid = -1;  // PID 리셋
-    } else {
-        printf("Python 스크립트가 실행 중이 아님2\n");
-    }
-}
-
 ///////////////////////////////////////////////////////////// 여기까지 C to python
-
-// 펄스 값 angle로 변경
-int angleToPulseWidth(float angle) {
-    return (int)((angle + 90) * (MAX_PULSE_WIDTH - MIN_PULSE_WIDTH) / 180 + MIN_PULSE_WIDTH);
-}
 
 // 모션 감지 스레드
 void *motionDetectionThread(void *arg) {
@@ -247,7 +211,7 @@ int main() {
     } else if (python_pid == 0){
         printf("python 프로세스 실행");
         fflush(stdout);
-        execlp("python3", "python3", "/home/pi/SDB/app3.py", NULL);
+        execlp("python3", "python3", "/home/pi/SDB/flask_app.py", NULL);
         perror("execlp 실패");
         exit(EXIT_FAILURE);
     } 

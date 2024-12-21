@@ -10,8 +10,6 @@
 
 <br/>
 
-
-
 <br/>
 
 ## 💡 프로젝트 배경
@@ -174,11 +172,7 @@ graph TD
 - 간단하고 가벼운 방식으로 프로세스 간 데이터 동기화 가능
 - 다른 언어를 사용하는 프로세스 간 데이터 공유가 간편
 - 강한 결합을 피하고 확장 가능한 구조 제공
-
-
-
----
-
+  
 ### 멀티 스레드 🔗
 
 - **Main Process (`motion_detection.c`)**
@@ -253,88 +247,88 @@ graph TD
 **핵심 코드**
 
 - **움직임 감지 (`Motion_Detection.c`)**:
-
-```c
-void *motionDetectionThread(void *arg) {
-    int motionDetected = 0;
-    unsigned long lastMotionTime = 0;
-
-    while (1) {
-        motionDetected = digitalRead(PIR_PIN);
-        if (motionDetected) {
-            lastMotionTime = millis();
-            if (!personDetected) {
-                personRecognition = 1;
-                personDetected = 1;
-                writeSignalToFile("1"); // "활성" 상태 기록
-                uploadToFirebase_Sensor();
-            }
-        } else if (!motionDetected && (millis() - lastMotionTime > 8000) && personRecognition) {
-            personRecognition = 0;
-            personDetected = 0;
-            writeSignalToFile("0"); // "비활성" 상태 기록
-        }
-        delay(200);
-    }
-}
-
-```
+  
+  ```c
+  void *motionDetectionThread(void *arg) {
+      int motionDetected = 0;
+      unsigned long lastMotionTime = 0;
+  
+      while (1) {
+          motionDetected = digitalRead(PIR_PIN);
+          if (motionDetected) {
+              lastMotionTime = millis();
+              if (!personDetected) {
+                  personRecognition = 1;
+                  personDetected = 1;
+                  writeSignalToFile("1"); // "활성" 상태 기록
+                  uploadToFirebase_Sensor();
+              }
+          } else if (!motionDetected && (millis() - lastMotionTime > 8000) && personRecognition) {
+              personRecognition = 0;
+              personDetected = 0;
+              writeSignalToFile("0"); // "비활성" 상태 기록
+          }
+          delay(200);
+      }
+  }
+  
+  ```
 
 - **녹화 및 Firebase 업로드 (`flask_app.py`)**:
 
-```python
-def start_recording():
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    video_path = os.path.join(video_dir, f"{timestamp}.h264")
-    print("녹화 시작...")
-    command = ["libcamera-vid", "-t", "0", "-o", video_path]
-    process = subprocess.Popen(command)
-    return process, video_path
+  ```python
+  def start_recording():
+      timestamp = time.strftime("%Y%m%d_%H%M%S")
+      video_path = os.path.join(video_dir, f"{timestamp}.h264")
+      print("녹화 시작...")
+      command = ["libcamera-vid", "-t", "0", "-o", video_path]
+      process = subprocess.Popen(command)
+      return process, video_path
+  
+  def convert_to_mp4(video_path):
+      convert_command = [
+          "ffmpeg",
+          "-i", video_path,
+          "-c:v", "copy",
+          video_path.replace(".h264", ".mp4")
+      ]
+      print("MP4 변환 중...")
+      subprocess.run(convert_command)
+      print("MP4 변환 완료")
+  
+  def upload_to_firebase(video_path):
+      firebase_video_upload.upload_file_to_firebase(
+          video_path, "videos/" + os.path.basename(video_path)
+      )
+  
+  def recording_controller():
+      while True:
+          with open(file_path, "r") as f:
+              state = f.read().strip()
+  
+          if state == "1":  # 활성 상태
+              if not recording_process:
+                  recording_process, current_video_path = start_recording()
+  
+          elif state == "0":  # 비활성 상태
+              if recording_process:
+                  recording_process.terminate()
+                  recording_process = None
+                  if current_video_path:
+                      convert_to_mp4(current_video_path)
+                      upload_to_firebase(current_video_path.replace(".h264", ".mp4"))
+          time.sleep(0.1)
+  
+  ```
 
-def convert_to_mp4(video_path):
-    convert_command = [
-        "ffmpeg",
-        "-i", video_path,
-        "-c:v", "copy",
-        video_path.replace(".h264", ".mp4")
-    ]
-    print("MP4 변환 중...")
-    subprocess.run(convert_command)
-    print("MP4 변환 완료")
-
-def upload_to_firebase(video_path):
-    firebase_video_upload.upload_file_to_firebase(
-        video_path, "videos/" + os.path.basename(video_path)
-    )
-
-def recording_controller():
-    while True:
-        with open(file_path, "r") as f:
-            state = f.read().strip()
-
-        if state == "1":  # 활성 상태
-            if not recording_process:
-                recording_process, current_video_path = start_recording()
-
-        elif state == "0":  # 비활성 상태
-            if recording_process:
-                recording_process.terminate()
-                recording_process = None
-                if current_video_path:
-                    convert_to_mp4(current_video_path)
-                    upload_to_firebase(current_video_path.replace(".h264", ".mp4"))
-        time.sleep(0.1)
-
-```
-
----
+<p> </p>
 
 ### 2. **영상 스트리밍**
 
 **주요 역할**
 
-- **스트리밍 활성화**: `/stream` 요청 시 비디오 스트림 활성화.
-- **스트리밍 중지**: `/stop_stream` 요청 시 비디오 스트림 중지.
+- **스트리밍 활성화**: `/stream` 요청 시 비디오 스트림 활성화
+- **스트리밍 중지**: `/stop_stream` 요청 시 비디오 스트림 중지
 
 **동작 방식**
 
@@ -348,24 +342,22 @@ def recording_controller():
 
 - **스트리밍 활성화 및 중지 (`flask_app.py`)**:
 
-```python
-@app.route('/stream')
-def stream():
-    with lock:
-        if not streaming_video.value:
-            initialize_camera()
-            streaming_video.value = True
-    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
-
-@app.route('/stop_stream')
-def stop_stream():
-    with lock:
-        streaming_video.value = False
-        release_camera()
-    return "스트리밍 중지"
-```
-
----
+  ```python
+  @app.route('/stream')
+  def stream():
+      with lock:
+          if not streaming_video.value:
+              initialize_camera()
+              streaming_video.value = True
+      return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+  
+  @app.route('/stop_stream')
+  def stop_stream():
+      with lock:
+          streaming_video.value = False
+          release_camera()
+      return "스트리밍 중지"
+  ```
 
 ### **3. 음성 입력 및 송신 (라즈베리파이 → 스마트폰)**
 
@@ -384,28 +376,24 @@ def stop_stream():
 
 - **오디오 스트리밍 (`flask_app.py`)**:
 
-```python
-python
-코드 복사
-def audio_stream():
-    CHUNK = 256
-    stream = audio1.open(format=FORMAT, channels=CHANNELS, input_device_index=2,
-                         rate=RATE, input=True, frames_per_buffer=CHUNK)
-    print("오디오 스트리밍 시작")
-    while is_streaming:
-        data = stream.read(CHUNK, exception_on_overflow=False)
-        yield data
-    stream.stop_stream()
-    stream.close()
-
-@app.route('/audio')
-def audio():
-    global is_streaming
-    is_streaming = True
-    return Response(audio_stream(), mimetype="audio/wav")
-```
-
----
+  ```python
+  def audio_stream():
+      CHUNK = 256
+      stream = audio1.open(format=FORMAT, channels=CHANNELS, input_device_index=2,
+                           rate=RATE, input=True, frames_per_buffer=CHUNK)
+      print("오디오 스트리밍 시작")
+      while is_streaming:
+          data = stream.read(CHUNK, exception_on_overflow=False)
+          yield data
+      stream.stop_stream()
+      stream.close()
+  
+  @app.route('/audio')
+  def audio():
+      global is_streaming
+      is_streaming = True
+      return Response(audio_stream(), mimetype="audio/wav")
+  ```
 
 ### **4. 음성 수신 및 출력 (스마트폰 → 라즈베리파이)**
 
@@ -424,110 +412,102 @@ def audio():
 
 - **오디오 파일 업로드 (`flask_app.py`)**:
 
-```python
-python
-코드 복사
-@app.route('/upload', methods=['POST'])
-def upload_audio():
-    if 'file' not in request.files:
-        return "No file part", 400
-    file = request.files['file']
-    if file.filename == '':
-        return "No selected file", 400
-    path = os.path.join(audio_path, file.filename)
-    file.save(path)
-    threading.Thread(target=play_audio, args=(path,)).start()
-    return f"File saved at {path}", 200
-
-def play_audio(audio_path):
-    print("오디오 재생 중...")
-    pygame.mixer.init()
-    pygame.mixer.music.load(audio_path)
-    pygame.mixer.music.play()
-    while pygame.mixer.music.get_busy():
-        continue
-    pygame.mixer.music.stop()
-    pygame.mixer.quit()
-```
+  ```python
+  @app.route('/upload', methods=['POST'])
+  def upload_audio():
+      if 'file' not in request.files:
+          return "No file part", 400
+      file = request.files['file']
+      if file.filename == '':
+          return "No selected file", 400
+      path = os.path.join(audio_path, file.filename)
+      file.save(path)
+      threading.Thread(target=play_audio, args=(path,)).start()
+      return f"File saved at {path}", 200
+  
+  def play_audio(audio_path):
+      print("오디오 재생 중...")
+      pygame.mixer.init()
+      pygame.mixer.music.load(audio_path)
+      pygame.mixer.music.play()
+      while pygame.mixer.music.get_busy():
+          continue
+      pygame.mixer.music.stop()
+      pygame.mixer.quit()
+  ```
 
 ### 5. **서보모터를 통한 도어락 제어**
 
 **주요 역할**
 
-- 원격 도어락 제어를 위한 서보모터 명령 처리.
-- 소켓 서버를 통해 명령 수신 및 서보모터 회전.
+- 원격 도어락 제어를 위한 서보모터 명령 처리
+- 소켓 서버를 통해 명령 수신 및 서보모터 회전
 
 **동작 방식**
 
 1. **명령 수신**
-    - 소켓 서버에서 명령을 수신하여 작업 큐에 저장.
+    - 소켓 서버에서 명령을 수신하여 작업 큐에 저장
 2. **명령 실행**
-    - 작업 큐에서 명령을 읽어 서보모터 회전 각도 설정.
+    - 작업 큐에서 명령을 읽어 서보모터 회전 각도 설정
 
 **핵심 코드**
 
 - **서보모터 제어 (`motor.c`)**:
 
-```c
-void *outputThread(void *arg) {
-    while (1) {
-        if (!queueIsEmpty()) {
-            char *command = dequeue();
-            if (strcmp(command, "LOCK") == 0) {
-                setServoAngle(0); // 도어락 잠금
-            } else if (strcmp(command, "UNLOCK") == 0) {
-                setServoAngle(90); // 도어락 해제
-            }
-            free(command);
-        }
-        usleep(50000);
-    }
-}
-```
-
----
+  ```c
+  void *outputThread(void *arg) {
+      while (1) {
+          if (!queueIsEmpty()) {
+              char *command = dequeue();
+              if (strcmp(command, "LOCK") == 0) {
+                  setServoAngle(0); // 도어락 잠금
+              } else if (strcmp(command, "UNLOCK") == 0) {
+                  setServoAngle(90); // 도어락 해제
+              }
+              free(command);
+          }
+          usleep(50000);
+      }
+  }
+  ```
 
 ### 6. **알림 및 데이터 업로드**
 
 **주요 역할**
 
-- Firebase를 통해 움직임 감지 알림 및 녹화 영상을 클라우드에 업로드.
+- Firebase를 통해 움직임 감지 알림 및 녹화 영상을 클라우드에 업로드
 
 **동작 방식**
 
 1. **움직임 감지 알림**
-    - PIR 센서에서 움직임 감지 시 Firebase API를 호출하여 알림 전송.
+    - PIR 센서에서 움직임 감지 시 Firebase API를 호출하여 알림 전송
 2. **녹화 영상 업로드**
-    - `.mp4`로 변환된 동영상 파일을 Firebase Storage에 업로드.
+    - `.mp4`로 변환된 동영상 파일을 Firebase Storage에 업로드
 
 핵심 코드
 
 - **움직임 감지 알림 (`Motion_Detection.c`)**:
 
-```c
-void uploadToFirebase_Sensor() {
-    system("python3 /home/pi/SDB/firebaseUpload_Sensor.py");
-}
-```
+  ```c
+  void uploadToFirebase_Sensor() {
+      system("python3 /home/pi/SDB/firebaseUpload_Sensor.py");
+  }
+  ```
 
 - **녹화 영상 업로드 (`flask_app.py`)**:
 
-```python
-def upload_to_firebase(video_path):
-    firebase_video_upload.upload_file_to_firebase(
-        video_path, "videos/" + os.path.basename(video_path)
-    )
-```
-
----
+  ```python
+  def upload_to_firebase(video_path):
+      firebase_video_upload.upload_file_to_firebase(
+          video_path, "videos/" + os.path.basename(video_path)
+      )
+  ```
 
 <br/>
 
 ## 📱 **앱 구현**
 
 Flutter로 개발된 스마트 도어벨 앱은 라즈베리파이와의 실시간 통신을 통해 영상 스트리밍, 음성 송수신, 도어락 제어 및 녹화 관리 기능을 제공한다. 사용자는 직관적인 UI를 통해 간편하게 스마트 도어벨의 다양한 기능을 활용할 수 있다.
-
----
 
 ### **앱의 주요 기능**
 
@@ -551,21 +531,19 @@ Flutter로 개발된 앱은 다음의 주요 기능을 제공합니다:
 
 **핵심 코드**:
 
-```dart
-dart
-코드 복사
-void _saveIp() {
-  setState(() {
-    _savedIp = _ipController.text;
-  });
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text("IP 주소가 저장되었습니다: $_savedIp")),
-  );
-}
-
-```
-
----
+  ```dart
+  dart
+  코드 복사
+  void _saveIp() {
+    setState(() {
+      _savedIp = _ipController.text;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("IP 주소가 저장되었습니다: $_savedIp")),
+    );
+  }
+  
+  ```
 
 ### 3. **영상 스트리밍**
 
@@ -573,33 +551,31 @@ void _saveIp() {
 
 **핵심 코드**:
 
-```dart
-dart
-코드 복사
-void _toggleWebcam() {
-  if (_savedIp.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("먼저 IP 주소를 저장해주세요.")),
-    );
-    return;
-  }
-
-  setState(() {
-    if (!_showWebcam) {
-      _showWebcam = true;
-      _webViewController.loadRequest(
-          Uri.parse('http://$_savedIp:5000/stream'));
-    } else {
-      _showWebcam = false;
-      _webViewController.loadRequest(
-          Uri.parse('http://$_savedIp:5000/stop_stream'));
+  ```dart
+  dart
+  코드 복사
+  void _toggleWebcam() {
+    if (_savedIp.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("먼저 IP 주소를 저장해주세요.")),
+      );
+      return;
     }
-  });
-}
-
-```
-
----
+  
+    setState(() {
+      if (!_showWebcam) {
+        _showWebcam = true;
+        _webViewController.loadRequest(
+            Uri.parse('http://$_savedIp:5000/stream'));
+      } else {
+        _showWebcam = false;
+        _webViewController.loadRequest(
+            Uri.parse('http://$_savedIp:5000/stop_stream'));
+      }
+    });
+  }
+  
+  ```
 
 ### 4. **음성 송신 (앱 → 라즈베리파이)**
 
@@ -607,40 +583,38 @@ void _toggleWebcam() {
 
 **핵심 코드**:
 
-```dart
-dart
-코드 복사
-GestureDetector(
-  onLongPressStart: (details) {
-    setState(() {
-      isRecordPressed = true;
-    });
-    startRecording();
-  },
-  onLongPressEnd: (details) async {
-    setState(() {
-      isRecordPressed = false;
-    });
-    await stopRecording();
-    await uploadAudio();
-  },
-  child: ElevatedButton(
-    onPressed: () {},
-    style: ElevatedButton.styleFrom(
-      backgroundColor: isRecordPressed ? Colors.blue : Colors.white,
-      shape: CircleBorder(),
-      padding: const EdgeInsets.all(20),
-    ),
-    child: Icon(
-      Icons.mic,
-      color: isRecordPressed ? Colors.white : Colors.blue,
-      size: 30,
+  ```dart
+  dart
+  코드 복사
+  GestureDetector(
+    onLongPressStart: (details) {
+      setState(() {
+        isRecordPressed = true;
+      });
+      startRecording();
+    },
+    onLongPressEnd: (details) async {
+      setState(() {
+        isRecordPressed = false;
+      });
+      await stopRecording();
+      await uploadAudio();
+    },
+    child: ElevatedButton(
+      onPressed: () {},
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isRecordPressed ? Colors.blue : Colors.white,
+        shape: CircleBorder(),
+        padding: const EdgeInsets.all(20),
+      ),
+      child: Icon(
+        Icons.mic,
+        color: isRecordPressed ? Colors.white : Colors.blue,
+        size: 30,
+      ),
     ),
   ),
-),
-```
-
----
+  ```
 
 ### 5. **음성 수신 (라즈베리파이 → 앱)**
 
@@ -648,30 +622,29 @@ GestureDetector(
 
 **핵심 코드**:
 
-```dart
-Future<void> _startStreaming() async {
-  if (_savedIp.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("먼저 IP 주소를 저장해주세요.")),
-    );
-    return;
+  ```dart
+  Future<void> _startStreaming() async {
+    if (_savedIp.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("먼저 IP 주소를 저장해주세요.")),
+      );
+      return;
+    }
+  
+    final String audioUrl = "http://$_savedIp:5000/audio";
+    try {
+      await _audioPlayer.stop();
+      await _audioPlayer.setUrl(audioUrl);
+      _audioPlayer.play();
+      setState(() {
+        _isPlaying = true;
+      });
+    } catch (e) {
+      print("Error starting audio stream: $e");
+    }
   }
+  ```
 
-  final String audioUrl = "http://$_savedIp:5000/audio";
-  try {
-    await _audioPlayer.stop();
-    await _audioPlayer.setUrl(audioUrl);
-    _audioPlayer.play();
-    setState(() {
-      _isPlaying = true;
-    });
-  } catch (e) {
-    print("Error starting audio stream: $e");
-  }
-}
-```
-
----
 
 ### 6. **도어락 제어**
 
@@ -701,8 +674,6 @@ Future<void> _sendRequest() async {
   }
 }
 ```
-
----
 
 ### 7. **녹화 목록 관리**
 
@@ -837,11 +808,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 - 초인종의 카메라로 바깥 상황을 실시간으로 앱에서 확인
 - 스마트폰 앱에서 음성 및 영상 통화 실행
 - 초인종 마이크로 음성 전달, 스마트폰 스피커로 출력
-- 스마트폰 마이크로 음성 전달, 초인종 스피커로 출력.
+- 스마트폰 마이크로 음성 전달, 초인종 스피커로 출력
 
 <br />
 
-## 👨🏻‍💻 팀원 소개
+## 👨🏻‍💻 팀원 소개 및 역할 분담
 | Profile | Role | Part |
 | ------- | ---- | ---- |
 | <div align="center"><a href="https://github.com/jsy0605" width="70px;" alt=""/><img src="https://github.com/user-attachments/assets/bae4b917-3c74-4fa2-ab8b-9efce2116c37" width="70px;" alt="dsky"/><br/><sub><b>정성윤</b><sub></a></div> | 팀장 | - 프로젝트 리더<br/>- 프로세스 일정 및 전반적인 관리<br/>- 라즈베리파이 통화 프로세스 구축<br/>- 카메라 연결 및 하드웨어 연결 <br/>- 화상 프로세스 구축|
@@ -852,41 +823,66 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
 <br/>
 
-## 🔍 결론 및 느낀 점
+## 🔍 결론 및 향후 개선 방향
 
 ### **프로젝트 성과 요약**
 
-- **실시간 음성 및 영상 전송**: Raspberry Pi와 앱 간의 실시간 음성 전달 및 스트리밍 기능 구현 성공.
-- **움직임 기반 녹화**: PIR 센서를 통한 움직임 감지 및 녹화, Firebase Storage로 녹화 영상 업로드 시스템 구축.
-- **장치 간 충돌 문제 해결**: 오디오, 카메라 모듈 등 장치 간 간섭 문제를 소프트웨어 및 하드웨어적으로 해결.
+- **실시간 음성 및 영상 전송**: Raspberry Pi와 앱 간의 실시간 음성 전달 및 스트리밍 기능 구현 성공
+- **움직임 기반 녹화**: PIR 센서를 통한 움직임 감지 및 녹화, Firebase Storage로 녹화 영상 업로드 시스템 구축
+- **장치 간 충돌 문제 해결**: 오디오, 카메라 모듈 등 장치 간 간섭 문제를 소프트웨어 및 하드웨어적으로 해결
 
 ### **해결된 주요 문제 및 방안**
 
 **실시간 음성 전달 간 오류 발생**
-- **문제**: 음성 처리 속도가 음성 파일 생성 속도를 따라가지 못해 스마트폰에서의 WAV 파일 전달 간 큐 오버플로우 발생.
-- **해결 방안**: 앱에서 "눌러서 말하기" 기능 도입으로 음성 파일 생성과 전송 간의 비동기 처리를 개선.
+- **문제**: 음성 처리 속도가 음성 파일 생성 속도를 따라가지 못해 스마트폰에서의 WAV 파일 전달 간 큐 오버플로우 발생
+- **해결 방안**: 앱에서 "눌러서 말하기" 기능 도입으로 음성 파일 생성과 전송 간의 비동기 처리를 개선
+  
 **오디오 장치 설정 간 문제 발생**
-- **문제**: 기본 오디오 입력 및 출력 장치 간의 충돌.
+- **문제**: 기본 오디오 입력 및 출력 장치 간의 충돌
 - **해결 방안**:
-  - ALSA에서 기본 장치 설정 변경 (`/etc/asound.conf`).
-  - Pygame은 기본 장치로 3.5mm 스피커 사용, PyAudio는 카드 번호로 마이크 장치 지정.
+  - ALSA에서 기본 장치 설정 변경 (`/etc/asound.conf`)
+  - Pygame은 기본 장치로 3.5mm 스피커 사용, PyAudio는 카드 번호로 마이크 장치 지정
+    
 **앱에서 전송한 음성 재생 불가 문제**
-- **문제**: 녹음, 전송, 저장 성공 후 Pygame에서 재생 오류 발생.
-- **해결 방안**: 앱의 음성 코덱(Coder)과 Raspberry Pi 재생 코덱(Decoder)을 일치시켜 오류 제거.
+- **문제**: 녹음, 전송, 저장 성공 후 Pygame에서 재생 오류 발생
+- **해결 방안**: 앱의 음성 코덱(Coder)과 Raspberry Pi 재생 코덱(Decoder)을 일치시켜 오류 제거
+  
 **카메라 관련 코드 통합 간 충돌**
-- **문제**: 스트리밍(Picamera2)과 녹화(Libcamera-Vid) 동시 처리 시 하드웨어 성능 문제로 프레임 저하 발생.
+- **문제**: 스트리밍(Picamera2)과 녹화(Libcamera-Vid) 동시 처리 시 하드웨어 성능 문제로 프레임 저하 발생
 - **해결 방안**:
-  - Lock을 사용해 카메라 모듈 충돌 방지.
-  - 스트리밍: 로딩 속도가 빠른 Picamera2 사용.
-  - 녹화: 안정적인 Libcamera-Vid 사용.
+  - Lock을 사용해 카메라 모듈 충돌 방지
+  - 스트리밍: 로딩 속도가 빠른 Picamera2 사용
+  - 녹화: 안정적인 Libcamera-Vid 사용
+    
 **PIR 센서 민감도 문제**
-- **문제**: PIR 센서의 High 신호 전달 시간이 길어 불규칙적 동작 발생.
+- **문제**: PIR 센서의 High 신호 전달 시간이 길어 불규칙적 동작 발생
 - **해결 방안**:
-  - 가변 저항이 달린 PIR 센서로 교체.
-  - 하드웨어적으로 햇빛 차단 및 측정 범위 제한.
-  - 소프트웨어적으로 LOW 상태에서도 녹화 지속되도록 조정.
+  - 가변 저항이 달린 PIR 센서로 교체
+  - 하드웨어적으로 햇빛 차단 및 측정 범위 제한
+  - 소프트웨어적으로 LOW 상태에서도 녹화 지속되도록 조정
+  
 **3.5mm 오디오 간섭 문제**
-- **문제**: GPIO 핀 간섭으로 인해 스피커에서 비정상적인 소음 발생.
-- **해결 방안**: 서보모터의 GPIO 핀을 18, 19에서 13번으로 변경하고 SoftPWM 방식으로 간섭 제거.
+- **문제**: GPIO 핀 간섭으로 인해 스피커에서 비정상적인 소음 발생
+- **해결 방안**: 서보모터의 GPIO 핀을 18, 19에서 13번으로 변경하고 SoftPWM 방식으로 간섭 제거
 
-### **느낀 점**
+### **향후 개선 및 기능 확장 가능성**
+
+1. **얼굴 인식을 통한 사용자 알림**
+    - OpenCV나 YOLO와 같은 얼굴 인식 기술을 활용해 방문자를 등록 및 식별.
+    - 얼굴 등록을 통해 "[방문자 1]님이 도착하였습니다."와 같은 맞춤형 알림 제공.
+    - 보안 수준을 높이고, 가족 및 친구와 같은 자주 방문하는 사람들에게 편리함 제공.
+2. **음성 품질 향상**
+    - 소음 제거 및 필터링 기술을 활용한 음성 품질 개선 (예: WebRTC, Noise Suppression)
+    - 마이크와 스피커 간 간섭 최소화를 위한 하드웨어 및 소프트웨어 최적화
+    - 더 자연스러운 양방향 음성 통신 지원
+3. **상시 음성 전달 구현**
+    - 스마트폰 앱에서 청크 단위로 음성 파일 전달하는 기능 구현했으나 오버플로우 발생
+    - 필터링 기술을 통한 파일 전송 최소화로 열린 마이크 기능 구현
+4. **사용자 편의성 증대**
+    - 앱 UI 개선: 사용자 경험을 중심으로 직관적인 디자인으로 리뉴얼
+    - 알림 커스터마이징 기능 추가: 사용자가 알림 톤, 진동 패턴 등을 선택할 수 있도록 설정 메뉴 제공
+    - 방문자 기록 확인 기능 추가: 방문자 히스토리를 날짜별로 확인 가능
+5. **보안 강화**
+    - 동영상 데이터의 암호화 및 클라우드 저장 시 보안 강화
+    - 앱과 라즈베리파이 간 통신의 HTTPS 적용으로 데이터 전송 중 보안 확보
+    - 알림에 이중 인증 기능 추가로 사용자의 정보 보호

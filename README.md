@@ -646,28 +646,28 @@ Flutter로 개발된 앱은 다음의 주요 기능을 제공한다:
 
 **핵심 코드**:
 
-```dart
-Future<void> _sendRequest() async {
-  if (_savedIp.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("먼저 IP 주소를 저장해주세요.")),
-    );
-    return;
+  ```dart
+  Future<void> _sendRequest() async {
+    if (_savedIp.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("먼저 IP 주소를 저장해주세요.")),
+      );
+      return;
+    }
+  
+    final url = Uri.parse("http://$_savedIp:5000/trigger");
+    try {
+      final response = await http.get(url);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("요청이 성공적으로 전송되었습니다.")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("요청 실패: $e")),
+      );
+    }
   }
-
-  final url = Uri.parse("http://$_savedIp:5000/trigger");
-  try {
-    final response = await http.get(url);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("요청이 성공적으로 전송되었습니다.")),
-    );
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("요청 실패: $e")),
-    );
-  }
-}
-```
+  ```
 
 ### 7. **녹화 목록 관리**
 
@@ -675,85 +675,85 @@ Firebase Storage에서 녹화된 영상 목록을 가져와 사용자에게 표�
 
 **Firebase Storage에서 녹화 목록 가져오기**:
 
-```dart
-Future<void> _fetchVideoList() async {
-  try {
-    final ref = FirebaseStorage.instance.ref('videos');
-    final result = await ref.listAll();
-
-    final videoInfo = await Future.wait(
-      result.items.map((fileRef) async {
-        final metadata = await fileRef.getMetadata();
-        final url = await fileRef.getDownloadURL();
-        final createdTime = metadata.timeCreated ?? DateTime.now();
-        final formattedTime = '${createdTime.year}-${createdTime.month.toString().padLeft(2, '0')}-${createdTime.day.toString().padLeft(2, '0')} ${createdTime.hour.toString().padLeft(2, '0')}:${createdTime.minute.toString().padLeft(2, '0')}';
-
-        return {'url': url, 'name': formattedTime};
-      }).toList(),
-    );
-
-    setState(() {
-      videoData = videoInfo;
-      isLoading = false;
-    });
-  } catch (e) {
-    print('Error fetching video list: $e');
-    setState(() {
-      isLoading = false;
-    });
+  ```dart
+  Future<void> _fetchVideoList() async {
+    try {
+      final ref = FirebaseStorage.instance.ref('videos');
+      final result = await ref.listAll();
+  
+      final videoInfo = await Future.wait(
+        result.items.map((fileRef) async {
+          final metadata = await fileRef.getMetadata();
+          final url = await fileRef.getDownloadURL();
+          final createdTime = metadata.timeCreated ?? DateTime.now();
+          final formattedTime = '${createdTime.year}-${createdTime.month.toString().padLeft(2, '0')}-${createdTime.day.toString().padLeft(2, '0')} ${createdTime.hour.toString().padLeft(2, '0')}:${createdTime.minute.toString().padLeft(2, '0')}';
+  
+          return {'url': url, 'name': formattedTime};
+        }).toList(),
+      );
+  
+      setState(() {
+        videoData = videoInfo;
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error fetching video list: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
-}
-```
+  ```
 
 **비디오 재생**:
 
-```dart
-lass VideoPlayerScreen extends StatefulWidget {
-  final String videoUrl;
-
-  const VideoPlayerScreen({required this.videoUrl});
-
-  @override
-  _VideoPlayerScreenState createState() => _VideoPlayerScreenState();
-}
-
-class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
-  late VideoPlayerController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = VideoPlayerController.network(widget.videoUrl)
-      ..initialize().then((_) {
-        setState(() {});
-        _controller.play();
-      });
+  ```dart
+  lass VideoPlayerScreen extends StatefulWidget {
+    final String videoUrl;
+  
+    const VideoPlayerScreen({required this.videoUrl});
+  
+    @override
+    _VideoPlayerScreenState createState() => _VideoPlayerScreenState();
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Play Video'),
-      ),
-      body: Center(
-        child: _controller.value.isInitialized
-            ? AspectRatio(
-                aspectRatio: _controller.value.aspectRatio,
-                child: VideoPlayer(_controller),
-              )
-            : CircularProgressIndicator(),
-      ),
-    );
+  
+  class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+    late VideoPlayerController _controller;
+  
+    @override
+    void initState() {
+      super.initState();
+      _controller = VideoPlayerController.network(widget.videoUrl)
+        ..initialize().then((_) {
+          setState(() {});
+          _controller.play();
+        });
+    }
+  
+    @override
+    Widget build(BuildContext context) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Play Video'),
+        ),
+        body: Center(
+          child: _controller.value.isInitialized
+              ? AspectRatio(
+                  aspectRatio: _controller.value.aspectRatio,
+                  child: VideoPlayer(_controller),
+                )
+              : CircularProgressIndicator(),
+        ),
+      );
+    }
+  
+    @override
+    void dispose() {
+      _controller.dispose();
+      super.dispose();
+    }
   }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-}
-```
+  ```
 <br/>
 
 ## 🖥 기능 시연
@@ -828,20 +828,24 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 ### **해결된 주요 문제 및 방안**
 
 1. **실시간 음성 전달 간 오류 발생**
+  
   - **문제**: 음성 처리 속도가 음성 파일 생성 속도를 따라가지 못해 스마트폰에서의 WAV 파일 전달 간 큐 오버플로우 발생
   - **해결 방안**: 앱에서 "눌러서 말하기" 기능 도입으로 음성 파일 생성과 전송 간의 비동기 처리를 개선
   
 2. **오디오 장치 설정 간 문제 발생**
+  
   - **문제**: 기본 오디오 입력 및 출력 장치 간의 충돌
   - **해결 방안**:
     - ALSA에서 기본 장치 설정 변경 (`/etc/asound.conf`)
     - Pygame은 기본 장치로 3.5mm 스피커 사용, PyAudio는 카드 번호로 마이크 장치 지정
     
 3. **앱에서 전송한 음성 재생 불가 문제**
+  
   - **문제**: 녹음, 전송, 저장 성공 후 Pygame에서 재생 오류 발생
   - **해결 방안**: 앱의 음성 코덱(Coder)과 Raspberry Pi 재생 코덱(Decoder)을 일치시켜 오류 제거
   
 4. **카메라 관련 코드 통합 간 충돌**
+  
   - **문제**: 스트리밍(Picamera2)과 녹화(Libcamera-Vid) 동시 처리 시 하드웨어 성능 문제로 프레임 저하 발생
   - **해결 방안**:
     - Lock을 사용해 카메라 모듈 충돌 방지
@@ -849,6 +853,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     - 녹화: 안정적인 Libcamera-Vid 사용
     
 5. **PIR 센서 민감도 문제**
+  
   - **문제**: PIR 센서의 High 신호 전달 시간이 길어 불규칙적 동작 발생
   - **해결 방안**:
     - 가변 저항이 달린 PIR 센서로 교체
@@ -856,31 +861,37 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     - 소프트웨어적으로 LOW 상태에서도 녹화 지속되도록 조정
   
 6. **3.5mm 오디오 간섭 문제**
+  
   - **문제**: GPIO 핀 간섭으로 인해 스피커에서 비정상적인 소음 발생
   - **해결 방안**: 서보모터의 GPIO 핀을 18, 19에서 13번으로 변경하고 SoftPWM 방식으로 간섭 제거
 
 ### **향후 개선 및 기능 확장 가능성**
 
 1. **얼굴 인식을 통한 사용자 알림**
+  
   - OpenCV나 YOLO와 같은 얼굴 인식 기술을 활용해 방문자를 등록 및 식별
   - 얼굴 등록을 통해 "[방문자 1]님이 도착하였습니다."와 같은 맞춤형 알림 제공
   - 보안 수준을 높이고, 가족 및 친구와 같은 자주 방문하는 사람들에게 편리함 제공
 
 2. **음성 품질 향상**
+  
   - 소음 제거 및 필터링 기술을 활용한 음성 품질 개선 (예: WebRTC, Noise Suppression)
   - 마이크와 스피커 간 간섭 최소화를 위한 하드웨어 및 소프트웨어 최적화
   - 더 자연스러운 양방향 음성 통신 지원
 
 3. **상시 음성 전달 구현**
+  
   - 스마트폰 앱에서 청크 단위로 음성 파일 전달하는 기능 구현했으나 오버플로우 발생
   - 필터링 기술을 통한 파일 전송 최소화로 열린 마이크 기능 구현
   
 4. **사용자 편의성 증대**
+
   - 앱 UI 개선: 사용자 경험을 중심으로 직관적인 디자인으로 리뉴얼
   - 알림 커스터마이징 기능 추가: 사용자가 알림 톤, 진동 패턴 등을 선택할 수 있도록 설정 메뉴 제공
   - 방문자 기록 확인 기능 추가: 방문자 히스토리를 날짜별로 확인 가능
 
 5. **보안 강화**
+   
   - 동영상 데이터의 암호화 및 클라우드 저장 시 보안 강화
   - 앱과 라즈베리파이 간 통신의 HTTPS 적용으로 데이터 전송 중 보안 확보
   - 알림에 이중 인증 기능 추가로 사용자의 정보 보호
